@@ -1,0 +1,59 @@
+.timescatter h1 {
+	font-size: 15px;
+	font-family: sans-serif;
+	color: #000;
+	font-weight: bold;
+}
+.timescatter .marker {
+	opacity: 0.4;
+	stroke: #333;
+}
+.timescatter .stat-line line {
+	stroke: #6f4f57;
+	stroke-width: 1px;
+	stroke-dasharray: 10,5;
+}
+.timescatter .stat-line text {
+	font-size: 10px;
+	fill: #000;
+	font-family: sans-serif;
+}
+.timescatter .cursor-line line {
+	stroke: #444;
+	stroke-width: 1px;
+	stroke-dasharray: 4,4;
+}
+.timescatter .cursor-line text {
+	font-size: 10px;
+	fill: #000;
+	font-family: sans-serif;
+}
+.timescatter .cursor-line rect {
+	fill: #fff;
+	opacity: 0.4;
+}
+.timescatter .legend {
+	box-sizing: border-box;
+	margin-top: 5px;
+	margin-bottom: 5px;
+	margin-left: 0px; margin-right: 0px;
+	padding: 0px;
+	display: flex;
+	flex-flow: row wrap;
+	justify-content: center;
+}
+.timescatter .legend-item {
+	margin-left: 4px;
+	margin-right: 4px;
+	margin-top: 2px;
+	margin-bottom: 2px;
+	padding-left: 4px;
+	padding-right: 4px;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	font-size: 10px;
+	font-family: sans-serif;
+	color: #000;
+	
+	flex: 0 1 auto;
+}
