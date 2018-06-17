@@ -1,0 +1,38 @@
+{
+"nodes" : [
+	{
+		"id": "0"
+		,"name": "Sample 1"
+		,"type": "Thing A"
+	},
+	{
+		"id": "1"
+		,"name": "Sample 2"
+		,"type": "Thing B"
+	},
+	{
+		"id": "2"
+		,"name": "Sample 3"
+		,"type": "Thing A"
+	},
+	{
+		"id": "3"
+		,"name": "sample 4"
+		,"type": "Thing A"
+	}
+],
+"links" : [
+	{
+		"source": "0"
+		,"target": "1"
+		,"rel": "Has a"
+		,"val": 10
+	},
+	{
+		"source": "0"
+		,"target": "2"
+		,"rel": "Has a"
+		,"val": 15
+	}
+]
+}

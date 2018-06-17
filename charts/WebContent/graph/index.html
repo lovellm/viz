@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="graph.css" rel="stylesheet" type="text/css" />
+    <title>Simple Graph DB</title>
+    <style>
+	    html, body {
+			margin: 0px; padding: 0px;
+			height: 100%;
+			overflow: hidden;
+		}
+    </style>
+</head>
+<body>
+    <script src="../lib/d3.min.js"></script>
+    <script src="../lib/jquery-3.3.1.min.js"></script>
+    <script src="Graph.js"></script>
+    <script>
+    	var c = null
+        $(document).ready(function(){
+            d3.json("sample.json", function(error, data){
+            	if ( error ){
+            		alert(error)
+            	} else {
+            		//alert(JSON.stringify(data))
+            		c = Graph()
+            		
+            		c.data(data)
+            		c.draw()
+            	}
+            })
+        })
+    </script>
+    
+    <ul class="drawer">
+		<li>
+			<a href="#">
+				<i>I</i>
+				<span>Nodes</span>
+			</a>
+			<ul>
+				<li>
+					<a href="#" onclick="c.addNode()">
+						<i>I</i>
+						<span>Add Node</span>
+					</a>
+				</li>
+			</ul>
+		</li>
+		<li>
+			<a href="#">
+				<i>I</i>
+				<span>Layout</span>
+			</a>
+			<ul>
+				<li>
+					<a href="#" onclick="c.resetPositions()">
+						<i>I</i>
+						<span>Reset</span>
+					</a>
+				</li>
+				<li>
+					<a href="#" onclick="c.bringNodesIntoVisible()">
+						<i>I</i>
+						<span>Bring Inside</span>
+					</a>
+				</li>
+			</ul>
+		</li>
+	</ul>
+</body>
+</html>
