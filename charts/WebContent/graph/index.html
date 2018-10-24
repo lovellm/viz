@@ -24,47 +24,46 @@
             		alert(error)
             	} else {
             		//alert(JSON.stringify(data))
-            		c = Graph()
-            		
+            		c = new Graph()
+            		//c.parent('#chart')
             		c.data(data)
             		c.draw()
             	}
             })
         })
     </script>
-    
+    <!-- <div id="chart" class="graph"></div> -->
     <ul class="drawer">
 		<li>
-			<a href="#">
-				<i>I</i>
-				<span>Nodes</span>
-			</a>
+			<a href="#"><i>I</i><span>Nodes</span></a>
 			<ul>
 				<li>
-					<a href="#" onclick="c.addNode()">
-						<i>I</i>
-						<span>Add Node</span>
-					</a>
+					<a href="#" onclick="c.addNode()"><i>I</i><span>Add Node</span></a>
 				</li>
 			</ul>
 		</li>
 		<li>
-			<a href="#">
-				<i>I</i>
-				<span>Layout</span>
-			</a>
+			<a href="#"><i>I</i><span>Layout</span></a>
 			<ul>
 				<li>
-					<a href="#" onclick="c.resetPositions()">
-						<i>I</i>
-						<span>Reset</span>
-					</a>
+					<a href="#" onclick="c.showLabels(!c.showLabels())"><i>I</i><span>Toggle Labels</span></a>
 				</li>
 				<li>
-					<a href="#" onclick="c.bringNodesIntoVisible()">
-						<i>I</i>
-						<span>Bring Inside</span>
-					</a>
+					<a href="#" onclick="c.resetPositions()"><i>I</i><span>Reset</span></a>
+				</li>
+				<li>
+					<a href="#" onclick="c.bringNodesIntoVisible()"><i>I</i><span>Bring Inside</span></a>
+				</li>
+			</ul>
+		</li>
+		<li>
+			<a href="#"><i>I</i><span>Function</span></a>
+			<ul>
+				<li>
+					<a href="#" onclick="c.dragMode('pull')"><i>I</i><span>Drag Pull</span></a>
+				</li>
+				<li>
+					<a href="#" onclick="c.dragMode('link')"><i>I</i><span>Drag Link</span></a>
 				</li>
 			</ul>
 		</li>
