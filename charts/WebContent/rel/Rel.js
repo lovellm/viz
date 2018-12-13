@@ -1,10 +1,10 @@
-function Graph(){
+function Rel(){
 /*
  * If 'new' was not used, use it.
  * Makes sure 'this' refers to instance scope
  */
-if ( ! (this instanceof Graph) ){
-	return new Graph()
+if ( ! (this instanceof Rel) ){
+	return new Rel()
 }
 //----------------
 //Local Properties
@@ -27,16 +27,15 @@ var _sel = {
 	dragLink: null
 }
 var _data = {
+	nodeDict: null,
 	allNodes: null,
 	allLinks: null,
 	nodes: null,
 	links: null,
 	nodeFilter: [],
 	linkFilter: [],
-	sim: null
 }
 var _config = {
-	'nodeMeasure' : 'sum',
 	'showLabels' : true,
 	'nodeMinSize' : 5,
 	'nodeMaxSize' : 10,
@@ -44,7 +43,6 @@ var _config = {
 	'linkMinSize' : 5,
 	'linkMaxSize' : 1,
 	'ttOffsetY' : 20,
-	'dragMode' : 'pull'
 }
 
 /**
@@ -60,6 +58,17 @@ function _generateUUID() { // Public Domain/MIT
         d = Math.floor(d / 16);
         return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
     });
+}
+
+//Given an array and index, finds the first non-truthy index from it, wrapping if needed
+function _nextFrom (array, from){
+	let arraySize = array.length
+	let position = Math.floor(from)
+	for ( let i = 0; i < arraySize; i++ ) {
+		let testI = position+i >= arraySize ? position+i-arraySize : position+i
+		if ( !array[testI] ) { return testI }
+	}
+	return null
 }
 
 /**
@@ -82,8 +91,27 @@ function _draw(){
 	//Draw the items
 	_drawItems()
 	_page.tooltip = _page.div.append('div').classed('tooltip',true)
-	//Start the force simulation
-	_startForceSim()
+}
+
+function _makeLayout(node, layout, i, top) {
+	if ( !node.checked ) {
+		var pos;
+		if ( top ) {
+			pos = _nextFrom(layout.grid,i)
+		} else {
+			pos = _nextFrom(layout.grid,i+(layout.numNodesX-(i%layout.numNodesX)))
+		}
+		layout.grid[pos]=1
+		node.x = layout.left + ((pos%layout.numNodesX)*layout.sizeX )
+		node.y = layout.top + (Math.floor(pos/layout.numNodesX)*layout.sizeY)
+		node.checked = true
+		node.pos = pos
+		if ( node.childs ) {
+			node.childs.forEach((n2)=>{
+				_makeLayout(n2,layout,pos)
+			})
+		}
+	}
 }
 
 function _drawItems(){
@@ -112,123 +140,39 @@ function _drawItems(){
 		.classed('hide', !_config.showLabels)
 		.text(function(d) { return d && d.name ? d.name : '' })
 	_sel.selLabels = _sel.gLabels.selectAll('text.label')
-}
-
-function _startForceSim(){
-	_data.sim = d3.forceSimulation()
-		.force('link', d3.forceLink()
-			.id( function(d) { return d.id })
-			.distance( _config.nodeMaxSize * 2 * _config.forceScale ))
-		.force('charge', d3.forceManyBody()
-				.strength(_config.nodeMaxSize * 2 * -_config.forceScale)
-				.distanceMax(_config.nodeMaxSize * 3 * _config.forceScale))
-		.force('collide', d3.forceCollide(_config.nodeMaxSize*2))
-		.force('center', d3.forceCenter(_page.width/2, _page.height/2))
 	
-	//_data.sim.velocityDecay(0.6)
-	_data.sim.on('tick', _simTick)
-	_data.sim.nodes(_data.nodes)
-	_data.sim.force('link').links(_data.links)
 	
-	_page.svg.call(d3.drag()
-		.container(_page.svg.node())
-		.subject( function(){ return _data.sim.find(d3.event.x, d3.event.y, 30) } )
-		.on('start', _dragStart)
-		.on('drag', _dragDrag)
-		.on('end', _dragEnd)
-	)
-}
-
-function _simTick(){
+	var layout = {}
+	layout.numNodes = _data.nodes.length
+	layout.left = _page.width * 0.1
+	layout.right = _page.width - (layout.left)
+	layout.top = _page.height * 0.1
+	layout.bottom = _page.height - (layout.top/2)
+	layout.numNodesX = Math.floor(Math.sqrt(layout.numNodes)* (_page.width/_page.height))
+	layout.numNodesY = Math.floor(Math.sqrt(layout.numNodes)* (_page.height/_page.width))
+	layout.sizeX = Math.floor((layout.right-layout.left) / layout.numNodesX)
+	layout.sizeY = Math.floor((layout.bottom-layout.top) / layout.numNodesY)
+	layout.grid = (new Array(layout.numNodes)).fill(0)
+	layout.mostRecent = 0;
+	_data.nodes = _data.nodes.sort((a,b)=>a._count-b._count)
+	
+	//Iterate nodes to make some coordinates
+	_data.allNodes.forEach((n,i)=>{
+		_makeLayout(n,layout,i,true)
+	})
+	
+	//Update Positions
 	_sel.selNodes
 		.attr('cx', function(d){ return d.x })
 		.attr('cy', function(d){ return d.y })
-		
 	_sel.selLinks
 		.attr('x1', function(d) { return d.source.x })
 		.attr('y1', function(d) { return d.source.y })
 		.attr('x2', function(d) { return d.target.x })
 		.attr('y2', function(d) { return d.target.y })
-		
 	_sel.selLabels
 		.attr('x', function(d) { return d.x })
 		.attr('y', function(d) { return d.y - _config.nodeMaxSize })
-}
-
-//============
-//Drag Related
-//============
-function _dragStart(){
-	switch ( _config.dragMode ) {
-	case 'pull': return _dragNodeStart();
-	case 'link': return _dragLinkStart();
-	default: return null;
-	}
-}
-function _dragDrag(){
-	switch ( _config.dragMode ) {
-	case 'pull': return _dragNodedragged();
-	case 'link': return _dragLinkDragged();
-	default: return null;
-	}
-}
-function _dragEnd(){
-	switch ( _config.dragMode ) {
-	case 'pull': return _dragNodeEnd();
-	case 'link': return _dragLinkEnd();
-	default: return null;
-	}
-}
-//pull mode: A drag event is started
-function _dragNodeStart(){
-	if ( !d3.event.active ) _data.sim.alphaTarget(0.3).restart()
-	d3.event.subject.fx = d3.event.subject.x
-	d3.event.subject.fy = d3.event.subject.y
-}
-//pull mode: An item is being dragged
-function _dragNodedragged(){
-	d3.event.subject.fx = d3.event.x
-	d3.event.subject.fy = d3.event.y
-}
-//pull mode: A drag event has ended
-function _dragNodeEnd(){
-	if ( !d3.event.active ) _data.sim.alphaTarget(0)
-	d3.event.subject.fx = null
-	d3.event.subject.fy = null
-}
-//Link Mode: Drag Start
-function _dragLinkStart(){
-	if ( !d3.event.active ){
-		_sel.dragLink = _page.svg.append('line').classed('draglink',true)
-			.attr('x1', d3.event.subject.x)
-			.attr('y1', d3.event.subject.y)
-			.attr('x2', d3.event.x)
-			.attr('y2', d3.event.y)
-	}
-}
-//Link Mode: Dragging
-function _dragLinkDragged(){
-	if ( _sel.dragLink ){
-		_sel.dragLink.attr('x2', d3.event.x).attr('y2', d3.event.y)
-	}
-}
-//Link Mode: Drag End
-function _dragLinkEnd(){
-	if ( !d3.event.active ){
-		_sel.dragLink.remove()
-		_sel.dragLink = null
-		var found = _data.sim.find(d3.event.x, d3.event.y, 30)
-		if ( found ){
-			_data.links.push({
-				source: d3.event.subject.id,
-				target: found.id,
-			})
-			_drawItems()
-			_data.sim.stop()
-			_data.sim.force('link').links(_data.links)
-			_data.sim.alpha(0.2).restart()
-		}
-	}
 }
 
 /**
@@ -237,8 +181,7 @@ function _dragLinkEnd(){
 function _resize(){
 	_page.width = _page.div.node().clientWidth
 	_page.height = _page.div.node().clientHeight
-	_data.sim.force('center', d3.forceCenter(_page.width/2, _page.height/2))
-	_data.sim.alphaTarget(0).restart()
+	_drawItems()
 }
 
 /**
@@ -269,7 +212,7 @@ function _nodeMouseOver(d_event){
 		return d.id == d_event.id
 	})
 	
-	_page.tooltip.style('display','block').html(d_event.name)
+	_page.tooltip.style('display','block').html(d_event.id)
 	
 	var ttHeight = _page.tooltip.node().clientHeight
 	var ttWidth = _page.tooltip.node().clientWidth
@@ -293,65 +236,52 @@ function _nodeMouseOut(){
 	_sel.selNodes.classed('sel adj',false)
 }
 
-
-function _addNode(){
-	_data.nodes.push({
-		id: _generateUUID,
-		name: 'New Node',
-		x: _page.width/2,
-		y: _page.height/2
-	})
-	_drawItems()
-	_data.sim.stop()
-	_data.sim.nodes(_data.nodes)
-	_data.sim.alpha(0.2).restart()
-}
-
-function _resetPositions(){
-	_data.sim.stop()
-	_data.nodes.forEach(function(d){
-		d.x = Math.random() * (_page.width-200) + 100
-		d.y = Math.random() * (_page.height-200) + 100
-		d.vx = 0
-		d.vy = 0
-	})
-	_data.sim.alpha(0.5).restart()
-}
-
-function _bringNodesIntoVisible(){
-	_data.sim.stop()
-	_data.nodes.forEach(function(d,i){
-		if ( d.x < 25 ){ d.x = 25 + ( Math.random() * (_page.width*0.1) ) }
-		else if ( d.x > _page.width -25 ){ d.x =  _page.width - 25 - (Math.random() * (_page.width*0.1)) }
-		if ( d.y < 25 ){ d.y = 25 + ( Math.random() * (_page.height*0.1) ) }
-		else if ( d.y > _page.height -25 ) { d.y =  _page.height -25 - (Math.random() * (_page.height*0.1)) }
-	})
-	_data.sim.alpha(0.5).restart()
-	//_simTick()
-}
-
-
 function _prepareData(_){
 	_data.nodeFilter = []
 	_data.linkFilter = []
-	//Check if no parameters
-	if ( !arguments.length ){
-		_data.allNodes = []
-		_data.allLinks = []
-	}
-	if ( _.nodes ){
-		_data.allNodes = _.nodes
-	}
-	if ( _.links ){
-		_data.allLinks = _.links
-	}
+	if ( _.nodes ){ _data.allNodes = _.nodes }
+	if ( _.links ){	_data.allLinks = _.links }
 	if ( !_data.allNodes ) { _data.allNodes = [] }
 	if ( !_data.allLinks ) { _data.allLinks = []}
+	_data.nodeDict = {}
+	var counts = {}
+	//Iterate links to get a count of nodes
+	_data.allLinks.forEach((l)=>{
+		if ( !l.id ) { l.id = _generateUUID() }
+		if ( !l.source || !l.target ) { 
+			l._skip = true
+			return
+		}
+		if ( typeof counts[l.source] === 'undefined' ) { counts[l.source] = {sc:0,tc:0} }
+		if ( typeof counts[l.target] === 'undefined' ) { counts[l.target] = {sc:0,tc:0} }
+		counts[l.source].sc++
+		counts[l.target].tc++
+	})
+	_data.maxLinks = 0
+	//Iterate nodes to set their count, find the max count, and make the dictionary
+	_data.allNodes.forEach((n)=>{
+		n._sc = counts[n.id] ? counts[n.id].sc || 0 : 0
+		n._tc = counts[n.id] ? counts[n.id].tc || 0 : 0
+		n._count = n._sc + n._tc
+		if ( n._count > _data.maxLinks ) { _data.maxLinks = n._count }
+		_data.nodeDict[n.id] = n
+	})
+	//Iterate links again to replace their source/target with the object reference
+	_data.allLinks.forEach((l)=>{
+		l.source = _data.nodeDict[l.source] || {}
+		l.target = _data.nodeDict[l.target] || {}
+		if ( typeof l.source.childs === 'undefined' ) {
+			l.source.childs = []
+		}
+		l.source.childs.push(l.target)
+		if ( typeof l.target.childs === 'undefined' ) {
+			l.target.childs = []
+		}
+		l.target.childs.push(l.source)
+	})
+	//Set the filtered version to the all version
 	_data.nodes = _data.allNodes
 	_data.links = _data.allLinks
-	_data.links.forEach((l)=>{
-		if ( !l.id ) { l.id = _generateUUID() }
-	})
 }
 
 function _filterData(){
@@ -393,7 +323,6 @@ function _filterData(){
 		return source && target
 	})
 	_drawItems()
-	_data.sim.alpha(1).alphaTarget(0).restart()
 }
 
 function _makeDiv(_){
@@ -430,9 +359,6 @@ var chart = {
 	//Expose Methods
 	//--------------
 	draw: _draw,
-	addNode: _addNode,
-	resetPositions: _resetPositions,
-	bringNodesIntoVisible: _bringNodesIntoVisible,
 	//-------------------
 	//Getters and Setters
 	//-------------------
@@ -449,15 +375,9 @@ var chart = {
 	 */
 	data: function(_){
 		if ( !arguments.length ) { 
-			let data = {}
-			return data
+			return _data
 		}
 		_prepareData(_)
-		return this
-	},
-	dragMode: function(_){
-		if ( !arguments.length ) { return _config.dragMode }
-		_config.dragMode = _
 		return this
 	},
 	showLabels: function(_){
@@ -474,7 +394,6 @@ var chart = {
 			_data.nodeFilter.push({field: field, filter: _})
 		}
 		_filterData()
-		if ( _===null ) { _resetPositions() }
 		return this
 	},
 	filterLinks: function(_){
@@ -485,7 +404,6 @@ var chart = {
 			_data.linkFilter.push({field: field, filter: _})
 		}
 		_filterData()
-		if ( _===null ) { _resetPositions() }
 		return this
 	}
 }
